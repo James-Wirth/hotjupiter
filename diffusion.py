@@ -42,8 +42,9 @@ def rand_i():
 def rand_2pi():
     return random.random()*2*np.pi
 
-def generate_rand_params(num_perts):
+def generate_rand_params(time_in_Myr):
 
+    num_perts = total_perts(time_in_Myr)
     rand_params = []
     for system in range(0,params.num_systems):
 
@@ -60,8 +61,9 @@ def generate_rand_params(num_perts):
 #--------------------------------------------
 # diffuse the eccentricity for num_perts total encounters
 
-def diffuse(num_perts):
+def diffuse(time_in_Myr):
 
+    num_perts = total_perts(time_in_Myr)
     rand_params = pd.read_hdf(params.rand_diff_params_path, 'rand')
 
     # check that we have enough randonm encounter parameters 
@@ -116,34 +118,26 @@ def diffuse(num_perts):
 #--------------------------------------------
 # plot the eccentricity diffusion at snapshot values of num_perts held in the array pert_sample
 
-def plot_diffusion(pert_sample):
+def plot_diffusion(time_sample):
     df = pd.read_csv(params.diff_data_path)
     df_numpy = df.drop(df.columns[0], axis=1).to_numpy()
+
+    to_num_perts = lambda t: int(t * params.perts_per_Myr)
+    vfunc = np.vectorize(to_num_perts)
+    pert_sample = vfunc(np.array(time_sample))
 
     fig, axs = plt.subplots(1, len(pert_sample), sharex = 'all', sharey='all')
     for j in range(0,3):
         axs[j].hist(df_numpy[pert_sample[j]], 50, range = (0,1), log=True, color='silver', label = "Hybrid MC", density=True)
-        axs[j].set_title(f'${pert_sample[j]}$ perts')
+        axs[j].set_title(f'${time_sample[j]:.2f}$ Myr')
         axs[j].title.set_size(18)
         axs[j].legend()
     
     fig.tight_layout(pad=2)
     plt.xlim(0,1)
     plt.ylim(10**-2,1.3e2)
-    fig.supxlabel('$e$')
+    fig.supxlabel('eccentricity')
     fig.supylabel("$p(e,t)$")
     fig.set_size_inches(12, 6)
     fig.savefig(params.diff_plot_path, format='eps')
     plt.show()
-
-#--------------------------------------------
-
-# generate randomised encounter data for num_perts total encounters
-# N.B. only need to run this once, unless you want to increase num_perts again!
-
-# generate_rand_params(total_perts(10))
-
-# diffuse for num_perts total encounters
-diffuse(total_perts(10))
-plot_diffusion([0,int(total_perts(10)/2),total_perts(10)-1])
-
